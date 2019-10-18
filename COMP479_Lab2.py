@@ -16,7 +16,7 @@ class Spimi:
         self.pathDisk = self.directory+ "/" + self.disk 
         self.pathReuters = self.directory +'/reuters'
         self.size = 0
-        self.sizeDISK = 0
+        self.SizeBLOCK = 0
         self.Hash = []
         self.HashSize = 0
         self.pathCurrentBlock = ""
@@ -56,7 +56,8 @@ class Spimi:
         if not os.path.isdir(self.directory):
             os.mkdir(self.disk)
 
-    def getSizeDISK(self):
+    #Get memory size
+    def getSizeBLOCK(self):
         file_name = 'temp.txt'
         if not os.path.isfile(self.directory + "/" + file_name):
             file_name = 'reut2-' + str(f'{0:03}') + '.sgm'
@@ -68,12 +69,12 @@ class Spimi:
             for i in range(500):
                 file_write.write(reuters_tag[0].get_text())
             os.path.getsize(self.directory + "/" + file_name)
-            self.sizeDISK = os.path.getsize(self.directory + "/" + file_name)
-            return self.sizeDISK
+            self.sizeBlock = os.path.getsize(self.directory + "/" + file_name)
+            return self.sizeBlock
         else:
             os.path.getsize(self.directory + "/" + file_name)
-            self.sizeDISK = os.path.getsize(self.directory + "/" + file_name)
-            return self.sizeDISK
+            self.sizeBlock = os.path.getsize(self.directory + "/" + file_name)
+            return self.sizeBlock
 
     def memoryUsedInDisk(self):
         for filename in os.listdir(self.directory+ "/" + self.disk):
@@ -82,7 +83,8 @@ class Spimi:
     #Big funtion creating dictionary
     def createDictionary(self):
         doesDictionnaryExist = False
-        listAllBlocks = sum([len(files) for r, d, files in os.walk(str(self.pathDisk))])
+        listAllBlocks = [x[0] for x in os.walk(self.pathDisk)]
+        #If dictionnary exists, no need to re create it
         for i in range(len(listAllBlocks)):
             if os.path.isfile(self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt"):
                 doesDictionnaryExist = True
@@ -99,6 +101,7 @@ class Spimi:
                 reuters_file = open(directory + "/reuters/" + file_name).read()
                 soup = BeautifulSoup(reuters_file, 'html.parser')
                 reuters_tag = soup.find_all('reuters')
+
                 self.pathCurrentBlock = self.pathDisk +"/BLOCK" + str(i)
                 for reuter in reuters_tag:
                     tokenl = nltk.word_tokenize(reuter.get_text()) 
@@ -113,11 +116,17 @@ class Spimi:
         count = 0
         index = 0
         term = ""
-        if sys.getsizeof(self.Hash) >= self.getSizeDISK():
-            self.mergeBlocks()
-        if sys.getsizeof(self.Hash) <= self.getSizeDISK():                   
-            for token in sorted_list:
-                t = token.replace('\\', '/')
+
+        for token in sorted_list:
+            t = token
+            #If String length is 0
+            if len(t) <= 1:
+                a=0
+            #If String doesn't start with a number or a letter    
+            elif t[0] == "\\":
+                a=0
+            #    
+            elif (re.match("^[a-zA-Z0-9]*", t)) :
                 #base case
                 if index == 0:
                     term = t
@@ -129,15 +138,15 @@ class Spimi:
                         dictionnary.append((term, article_id, count))    
                         count = 1
                         term = t
-        
-        self.Hash.append(dictionnary) 
+        if len(dictionnary) != 0:
+            self.Hash.append(dictionnary) 
 
     def mergeBlocks(self):
         temp = [None] * round((len(self.Hash) / 2))
-        j = 0
+        j=0
         while len(self.Hash) > 2:
             for i in range(len(self.Hash)):
-                if(i % 2 == 1 ):
+                if(i % 2 == 1 and i < len(self.Hash)):
                     temp[j] = self.Hash[i] + self.Hash[i-1]
                     print("Merge Block " + str(i-1) + " with Block " + str(i) + " to new index " + str(j))
                     j+=1
@@ -178,15 +187,27 @@ class Spimi:
                         #print(key + "          " + str(value) + "          " + str(frequency))
                             block.write(key + "                    " + str(value) + "                    " + str(frequency) + "\n")
 
-    #def loadDictionnary(self):
-        
+    def loadDictionnary(self):
+        listBlocks = sum([len(files) for r, d, files in os.walk(str(self.pathDisk))])
+        for i in range(listBlocks):
+            fileBlock = open(self.pathDisk + "/block" + str(i) +  "/block" + str(i) + ".txt")
+            line = fileBlock.readline()
+            counter = 0
+            while line:
+                #Read all except first line
+                if counter != 0:
+                    dictionnaryLine = line.split("                    ")
+                    line = fileBlock.readline()
+                counter +=1
+
 test = Spimi()
 test.createStorage()
-test.getSizeDISK()
+test.getSizeBLOCK()
 test.memoryUsedInDisk()
 test.createDictionary()
 test.mergeBlocks()
 test.writeBlockToDisk()
+test.loadDictionnary()
 #print(test.Hash[4999])
 #print(test.HashSize)
 # print(sys.getsizeof( test.Hash))
