@@ -6,6 +6,7 @@ import nltk
 from nltk.stem import PorterStemmer
 import sys
 import codecs
+import shutil
 
 class Spimi:
 
@@ -109,6 +110,10 @@ class Spimi:
                 #     break
                 # break
     
+    """
+    Here, variable count keeps track of term frequency in document
+    """
+
     #List tokens of 1 article with its docID and Frequency
     def listTerms(self, tokenList, article_id):
         sorted_list = sorted(tokenList)
@@ -135,7 +140,7 @@ class Spimi:
                     if t == term :
                         count += 1
                     else: 
-                        dictionnary.append((term, article_id, count))    
+                        dictionnary.append((term, article_id))    
                         count = 1
                         term = t
         if len(dictionnary) != 0:
@@ -157,57 +162,90 @@ class Spimi:
             temp = sorted(self.Hash[i])
             self.Hash[i] = temp
 
+    def writeMergedBlocksToDisk(self):
+        folders = len([x[0] for x in os.walk(self.pathDisk)])
+        for i in range(folders):
+            try:
+                shutil.rmtree(self.pathDisk + "/block" + str(i))
+            except FileNotFoundError:
+                a=1
+        self.mergeBlocks()
+        self.writeBlockToDisk()
+
     def writeBlockToDisk(self):
-        for i in range(len(self.Hash)):
-            #Case Block exists
-            if os.path.isdir(self.pathDisk + "/block" + str(i)):
-                #If Block file already exists
-                if os.path.isfile(self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt"):
-                    print("Writing to block " + str(i) + " interrupted. Dictionary exists already.")
-                #Create and write to block file
-                else:
-                    block = codecs.open((self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt"), "a", encoding='utf-8')
-                    block.write("term                    docID                    frequency")
-                    for key, value, frequency in self.Hash[i]:
-                        if key != " " or key!=None or key != "": 
+        if len([x[0] for x in os.walk(self.pathDisk)]) > 2:
+            print("Nothing to write")
+        else:
+                
+            for i in range(len(self.Hash)):
+                #Case Block exists
+                if os.path.isdir(self.pathDisk + "/block" + str(i)):
+                    #If Block file already exists
+                    if os.path.isfile(self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt"):
+                        print("Writing to block " + str(i) + " interrupted. Dictionary exists already.")
+                    #Create and write to block file
+                    else:
+                        block = codecs.open((self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt"), "a", encoding='utf-8')
+                        block.write("term                                        docID" + "\n")
+                        for key, value in self.Hash[i]:
+                            if key != " " or key!=None or key != "": 
+                                #print(key + "          " + str(value) + "          " + str(frequency))
+                                block.write(key + "                                        " + str(value) + "\n")
+                #case Block does not exists
+                if not os.path.isdir(self.pathDisk + "/block" + str(i)):
+                    os.mkdir(self.pathDisk + "/block" + str(i))
+                    #If Block file already exist
+                    if os.path.isfile(self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt"):
+                        print("Writing to block " + str(i) + " interrupted. Dictionary exists already.")
+                    #Create file
+                    else:
+                        block = codecs.open((self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt" ), "a", encoding='utf-8')
+                        block.write("term                                        docID" + "\n")
+                        for key, value in self.Hash[i]:
+                            if key != " " or key!=None or key != "": 
                             #print(key + "          " + str(value) + "          " + str(frequency))
-                            block.write(key + "                    " + str(value) + "                    " + str(frequency))
-            #case Block does not exists
-            if not os.path.isdir(self.pathDisk + "/block" + str(i)):
-                os.mkdir(self.pathDisk + "/block" + str(i))
-                #If Block file already exist
-                if os.path.isfile(self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt"):
-                    print("Writing to block " + str(i) + " interrupted. Dictionary exists already.")
-                #Create file
-                else:
-                    block = codecs.open((self.pathDisk + "/block" + str(i) + "/block" + str(i) + ".txt" ), "a", encoding='utf-8')
-                    block.write("term                    docID                    frequency \n")
-                    for key, value, frequency in self.Hash[i]:
-                        if key != " " or key!=None or key != "": 
-                        #print(key + "          " + str(value) + "          " + str(frequency))
-                            block.write(key + "                    " + str(value) + "                    " + str(frequency) + "\n")
+                                block.write(key + "                                        " + str(value)  + "\n")
 
     def loadDictionnary(self):
         listBlocks = sum([len(files) for r, d, files in os.walk(str(self.pathDisk))])
-        for i in range(listBlocks):
-            fileBlock = open(self.pathDisk + "/block" + str(i) +  "/block" + str(i) + ".txt")
-            line = fileBlock.readline()
-            counter = 0
-            while line:
-                #Read all except first line
-                if counter != 0:
-                    dictionnaryLine = line.split("                    ")
-                    line = fileBlock.readline()
-                counter +=1
+        if len(self.Hash) == 0:
+            dictionnary = []
+            for i in range(listBlocks):
+                fileBlock = open(self.pathDisk + "/block" + str(i) +  "/block" + str(i) + ".txt")
+                line = fileBlock.readline()
+                counter = 0
+                dictionaryIndex = []
+                while line:
+                    #Read all except first line
+                    if counter != 0:
+                        dictionnaryLine = line.split("                                        ")
+                        temp_removeLineSpace = dictionnaryLine[1].replace("\n", "")
+                        dictionnaryLine[1] = temp_removeLineSpace
+                        dictionaryIndex.append((dictionnaryLine[0], dictionnaryLine[1]))
+                        line = fileBlock.readline()
+                    counter +=1
+                dictionnary.append(dictionaryIndex)
+            self.Hash = dictionnary
+            
 
+
+"""
+Question 1 a)
+
+Creates blocks that are less than 500 reuters articles
+Creates dictionary
+then writes to blocks 
+
+"""
 test = Spimi()
 test.createStorage()
 test.getSizeBLOCK()
 test.memoryUsedInDisk()
 test.createDictionary()
-test.mergeBlocks()
 test.writeBlockToDisk()
 test.loadDictionnary()
+test.writeMergedBlocksToDisk()
+#test.mergeBlocks()
 #print(test.Hash[4999])
 #print(test.HashSize)
 # print(sys.getsizeof( test.Hash))
