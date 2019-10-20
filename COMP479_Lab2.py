@@ -7,6 +7,7 @@ from nltk.stem import PorterStemmer
 import sys
 import codecs
 import shutil
+import argparse
 
 class Spimi:
 
@@ -21,6 +22,7 @@ class Spimi:
         self.Hash = []
         self.HashSize = 0
         self.pathCurrentBlock = ""
+        self.query = ""
 
     #Get all reuters tags from all files
     def search(self):
@@ -226,7 +228,30 @@ class Spimi:
                     counter +=1
                 dictionnary.append(dictionaryIndex)
             self.Hash = dictionnary
+    def send_query(self):
+        query = self.query
+        print('a')
+        
+    def map_request(self, args):       
+        print(args.command)        
+        self.createStorage()
+        self.getSizeBLOCK()
+        self.memoryUsedInDisk()
+        if args.command == "createdictionary":
+            self.createDictionary()
+            self.writeBlockToDisk()
+        elif args.command == "mergeblocks":
+            self.loadDictionnary()
+            self.writeMergedBlocksToDisk()
+        elif args.command == "query":
+            self.query = args.query
+            self.loadDictionnary()
+            self.send_query()
             
+            return args.query
+        else:
+            print('a')
+
 
 
 """
@@ -237,14 +262,18 @@ Creates dictionary
 then writes to blocks 
 
 """
+parser = argparse.ArgumentParser()
+parser.add_argument('command', choices=['createdictionary','mergeblocks', 'query', 'help'], help="SPIMI index inverted implementation. use createdictionary, mergeblocks, query or help for usage.")
+parser.add_argument('query', type=str, action="store", help="write query using && , || for multiple keywords. enclose your query in the following manner: \"[YOUR_KEYWORD1 [&&, ||] YOUR_KEYWORK2]\"")
+args = parser.parse_args()
 test = Spimi()
-test.createStorage()
-test.getSizeBLOCK()
-test.memoryUsedInDisk()
-test.createDictionary()
-test.writeBlockToDisk()
-test.loadDictionnary()
-test.writeMergedBlocksToDisk()
+
+test.map_request(args)
+
+# test.createDictionary()
+# test.writeBlockToDisk()
+# test.loadDictionnary()
+# test.writeMergedBlocksToDisk()
 #test.mergeBlocks()
 #print(test.Hash[4999])
 #print(test.HashSize)
