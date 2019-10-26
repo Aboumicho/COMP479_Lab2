@@ -1,4 +1,4 @@
-
+import re
 
 class QueryHandler:
     def __init__(self, query):
@@ -6,6 +6,7 @@ class QueryHandler:
         self.infix = ""
         self.operators = "&|"
         self.postfix = ""
+        self.keywordmap = []
 
     def getPrecedence(self, c):
         result = 0
@@ -53,13 +54,21 @@ class QueryHandler:
         while len(stack) > 0:
             cpop = stack.pop()
             result+=cpop
-        
+        count_index = 0
+        r_no_operators = re.sub(r'[^\w]', ' ', self.query)
+        #print(r_no_operators)
+        for keyword in r_no_operators.split(" "):
+            if keyword in self.query and keyword!="": 
+                result = result.replace(keyword, str(count_index))
+                self.keywordmap.append(keyword)
+                count_index+=1
         return result
+
+    def getKeywordMapping(self):
+        return self.keywordmap
 
     def isOperand(self, char):
         return ((char >= 'A' and char <= 'Z') or (char >= 'a' and char <="z"))  
     def isOperator(self, char):
         return char in self.operators
 
-test = QueryHandler("al & (va| sa)")
-print(test.toPostfix())

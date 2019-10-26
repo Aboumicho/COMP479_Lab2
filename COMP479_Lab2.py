@@ -8,6 +8,7 @@ import sys
 import codecs
 import shutil
 import argparse
+from QueryHandler import QueryHandler
 
 class Spimi:
 
@@ -23,6 +24,9 @@ class Spimi:
         self.HashSize = 0
         self.pathCurrentBlock = ""
         self.query = ""
+        self.keywordmap = []
+        self.hits = []
+        self.words = []
 
     #Get all reuters tags from all files
     def search(self):
@@ -151,6 +155,7 @@ class Spimi:
     def mergeBlocks(self):
         temp = [None] * round((len(self.Hash) / 2))
         j=0
+        final = []
         while len(self.Hash) > 2:
             for i in range(len(self.Hash)):
                 if(i % 2 == 1 and i < len(self.Hash)):
@@ -160,9 +165,27 @@ class Spimi:
             self.Hash = temp
             temp = [None] * round((len(self.Hash) / 2))
             j = 0
+        t = []
         for i in range(len(self.Hash)):
-            temp = sorted(self.Hash[i])
-            self.Hash[i] = temp
+            for key,value in self.Hash[i]:
+                t.append((key,value))
+        temp1 = sorted(t, key=lambda tup: tup[0])
+
+        c = 0
+        temp2 = []
+        temp3 = []
+
+        #Append the tuples to both temp variables
+        for i in temp1:
+            if c < len(t)/2:
+                temp2.append(i)
+            else:
+                temp3.append(i)
+            c+=1
+        #Append final 2 indexes to Hash
+        self.Hash[0]= temp2
+        self.Hash[1] = temp3
+
 
     def writeMergedBlocksToDisk(self):
         folders = len([x[0] for x in os.walk(self.pathDisk)])
@@ -207,9 +230,10 @@ class Spimi:
                             if key != " " or key!=None or key != "": 
                             #print(key + "          " + str(value) + "          " + str(frequency))
                                 block.write(key + "                                        " + str(value)  + "\n")
-
+    #Load the dictionnary
     def loadDictionnary(self):
         listBlocks = sum([len(files) for r, d, files in os.walk(str(self.pathDisk))])
+        #If Hash is empty
         if len(self.Hash) == 0:
             dictionnary = []
             for i in range(listBlocks):
@@ -228,9 +252,145 @@ class Spimi:
                     counter +=1
                 dictionnary.append(dictionaryIndex)
             self.Hash = dictionnary
+    
+    #Sends postfix query to be operated on with each number mapping
     def send_query(self):
         query = self.query
-        print('a')
+        queryhandler = QueryHandler(query)
+        postfix = queryhandler.toPostfix()
+        self.keywordmap = queryhandler.getKeywordMapping()
+        print(postfix)
+        self.build_request(queryhandler, postfix)
+    
+    #Check if all operations are OR
+    def isAllOrs(self, queryhandler, postfix):
+        isAnd = False
+        isOr = False
+        if "|" in postfix:
+            isOr = True
+        if "&" in postfix:
+            isAnd = True
+        return (isOr and not isAnd)
+
+    #Check if all operations are AND
+    def isAllAnds(self, queryhandler, postfix):
+        isOr = False
+        isAnd = False
+        if "|" in postfix:
+            isOr = True
+        if "&" in postfix:
+            isAnd = True
+        return (not isOr and isAnd)
+
+    #Does operation if all operations are OR
+    def doAllOrs(self, queryhandler, postfix):
+        s = []
+        #Append all words to s
+        for term in postfix:
+            if term.isdigit():
+                s.append(self.keywordmap[int(term)])
+        words = sorted(s)
+        print(words)
+        for i in range(len(self.Hash)):
+            for key,value in self.Hash[i]:
+                for c in words:
+                    if c.lower() == key.lower():
+                        self.hits.append((key,value))
+                        break
+                    #Performance enhancer
+                    if ord(words[-1][0]) >  ord(key[0].lower()):
+                        break
+
+        print(self.hits)
+
+    #Does operation if all operations are AND
+    def doAllAnds(self, queryhandler, postfix):
+        words=[]
+        for term in postfix:
+            if term.isdigit():
+                words.append(self.keywordmap[int(term)])
+        
+        for key,value in self.Hash:
+            print()
+    #Analogous to infix -> postfix method
+    def build_request(self, queryhandler, postfix):
+        operands = []
+        if self.isAllOrs(queryhandler, postfix):
+            self.doAllOrs(queryhandler, postfix)
+        elif self.isAllAnds(queryhandler, postfix):
+            self.doAllAnds(queryhandler, postfix)
+        else:
+            for char in postfix: 
+                #If an operand, push to operands []
+                if char.isdigit():
+                    operands.append(self.keywordmap[int(char)])
+                    self.words.append(self.keywordmap[int(char)])
+                elif queryhandler.isOperator(char):
+                    temp1 = operands.pop()
+                    temp2 = operands.pop()
+                    if char == "|":
+                        operands.append(self.or_operator(temp1, temp2))
+                    elif char == "&":
+                        operands.append(self.and_operator(temp1, temp2))
+
+    def or_operator(self, keyword1, keyword2):
+        self.hits = []
+        #If both strings
+        if isinstance(keyword1, str) and isinstance(keyword2, str):
+            i=0
+            for key, value in self.Hash[i]:
+                if key.lower() == keyword1.lower() or key.lower() == keyword2.lower():
+                    self.hits.append((key, value))
+                i+=1
+        #If keyword1 is a list, other is a string
+        if isinstance(keyword1, list) and isinstance(keyword2, list):
+            self.or_Array_and_String(keyword1, keyword2)
+        #If keyword2 is a list, other is a string
+        elif isinstance(keyword1, list) and isinstance(keyword2, list):
+            self.or_Array_and_String(keyword2, keyword1)
+        return self.hits
+
+    def or_Array_and_String(self, array, string):
+        self.hits = []
+        for i in range(len(self.Hash)):
+                for key, value in self.Hash[i]:
+                    if key.lower() == string.lower():
+                        self.hits.append((key, value))
+        return self.hits
+
+    def and_operator(self, keyword1, keyword2):
+        temp = []
+        k1 = ""
+        k2 = ""
+        k1_found = False
+        k2_found = False
+        if isinstance(keyword1, str) and isinstance(keyword2, str):
+            """
+            Check which keyword comes after the other
+            k1 is the lowest and k2 is the highest
+            """
+            if(id(keyword1) > id(keyword2)):
+                k1 = keyword2
+                k2 = keyword1
+            else: 
+                k1 = keyword1
+                k2 = keyword2
+
+            for i in range(len(self.Hash)):
+                for k,v in self.Hash[i]:
+                    #If k2 found but not k1, search other index (PERFORMANCE)
+                    if(k2.lower == k.lower() and k1_found == False):
+                        print("keyword: " + k1 + " and keyword: " + k2 + " are not in block" + str(i))
+                        break
+                    elif(k1.lower() == k.lower()):
+                        k1_found = True
+                        temp.append((k ,v))
+                    elif(k2.lower() == k.lower()):
+                        for j in range(i, len(self.Hash)):
+                            ad=1                            
+
+                        break
+
         
     def map_request(self, args):       
         print(args.command)        
@@ -242,15 +402,12 @@ class Spimi:
             self.writeBlockToDisk()
         elif args.command == "mergeblocks":
             self.loadDictionnary()
+            self.mergeBlocks()
             self.writeMergedBlocksToDisk()
         elif args.command == "query":
             self.query = args.query
             self.loadDictionnary()
             self.send_query()
-            
-            return args.query
-        else:
-            print('a')
 
 
 
