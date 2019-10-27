@@ -482,56 +482,6 @@ class Spimi:
         f.write("List of document IDs that match query: " + self.query + "\n")
         for docHit in self.resultant:
             f.write("document " + str(docHit) + "\n")
-    # def or_operator(self, keyword1, keyword2):
-    #     self.hits = []
-    #     #If both strings
-    #     if isinstance(keyword1, str) and isinstance(keyword2, str):
-    #         i=0
-    #         for key, value in self.Hash[i]:
-    #             if key.lower() == keyword1.lower() or key.lower() == keyword2.lower():
-    #                 self.hits.append((key, value))
-    #             i+=1
-    #     #If keyword1 is a list, other is a string
-    #     if isinstance(keyword1, list) and isinstance(keyword2, list):
-    #         self.or_Array_and_String(keyword1, keyword2)
-    #     #If keyword2 is a list, other is a string
-    #     elif isinstance(keyword1, list) and isinstance(keyword2, list):
-    #         self.or_Array_and_String(keyword2, keyword1)
-    #     return self.hits
-
-    # def and_operator(self, keyword1, keyword2):
-    #     temp = []
-    #     k1 = ""
-    #     k2 = ""
-    #     k1_found = False
-    #     k2_found = False
-    #     if isinstance(keyword1, str) and isinstance(keyword2, str):
-    #         """
-    #         Check which keyword comes after the other
-    #         k1 is the lowest and k2 is the highest
-    #         """
-    #         if(id(keyword1) > id(keyword2)):
-    #             k1 = keyword2
-    #             k2 = keyword1
-    #         else: 
-    #             k1 = keyword1
-    #             k2 = keyword2
-
-    #         for i in range(len(self.Hash)):
-    #             for k,v in self.Hash[i]:
-    #                 #If k2 found but not k1, search other index (PERFORMANCE)
-    #                 if(k2.lower == k.lower() and k1_found == False):
-    #                     break
-    #                 elif(k1.lower() == k.lower()):
-    #                     k1_found = True
-    #                     temp.append((k ,v))
-    #                 elif(k2.lower() == k.lower()):
-    #                     for j in range(i, len(self.Hash)):
-    #                         ad=1                            
-
-    #                     break
-
-        
         
     def map_request(self, args):       
         print(args.command)        

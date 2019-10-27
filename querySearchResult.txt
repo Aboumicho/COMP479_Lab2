@@ -1,4 +1,4 @@
-List of document IDs that match query: Fidata|(Corp&bankruptcy)
+List of document IDs that match query: Fidata|(Corp&bankruptcy&anticipates)
 document 44
 document 11001
 document 15065
