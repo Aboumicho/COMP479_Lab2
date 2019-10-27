@@ -420,8 +420,8 @@ class Spimi:
                     else:
                         if char == "|":
                             print("ERROR??!?!")
-                            print(str(temp1))
-                            print(str(temp2))
+                            print(isinstance(temp1, list))
+                            print(isinstance(temp2, str))
                             #If both term1 and term2 are strings
                             if isinstance(temp1, str) and isinstance(temp2, str):
                                 pf = temp1+temp2+char
@@ -433,9 +433,10 @@ class Spimi:
                                 if isinstance(temp1,str) and isinstance(temp2,list):
                                     resultant += self.doAllOrs(temp1)
                                 elif isinstance(temp1, list) and isinstance(temp2, str):
-                                    resultant += self.doAllOrs(temp1)
+                                    resultant += self.doAllOrs(temp2)
                                 elif isinstance(temp1, list) and isinstance(temp2, list):
                                     resultant = temp1 + temp2
+                                self.resultant = resultant
                         elif char == "&":
                             #If both term1 and term2 are strings
                             if isinstance(temp1, str) and isinstance(temp2,str):
