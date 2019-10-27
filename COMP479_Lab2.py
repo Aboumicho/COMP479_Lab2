@@ -9,6 +9,10 @@ import codecs
 import shutil
 import argparse
 from QueryHandler import QueryHandler
+from operator import itemgetter
+from itertools import groupby
+from collections import Counter
+import numpy, collections
 
 class Spimi:
 
@@ -283,8 +287,10 @@ class Spimi:
         return (not isOr and isAnd)
 
     #Does operation if all operations are OR
-    def doAllOrs(self, queryhandler, postfix):
+    #Returns array of matched documents
+    def doAllOrs(self, postfix):
         s = []
+        hits = []
         #Append all words to s
         for term in postfix:
             if term.isdigit():
@@ -295,43 +301,122 @@ class Spimi:
             for key,value in self.Hash[i]:
                 for c in words:
                     if c.lower() == key.lower():
-                        self.hits.append((key,value))
+                        hits.append(value)
                         break
                     #Performance enhancer
                     if ord(words[-1][0]) >  ord(key[0].lower()):
                         break
-
-        print(self.hits)
+        
+        mylist = list(dict.fromkeys(hits))
+        tempp = []
+        for num in mylist:
+            try:
+                tempp.append(int(num))
+            except TypeError:
+                print("Type error")
+        mylist = tempp
+        x = sorted(mylist)
+        print(x)
+        return x
 
     #Does operation if all operations are AND
-    def doAllAnds(self, queryhandler, postfix):
+    def doAllAnds(self, postfix):
         words=[]
+        s=[]
+        count = 0
+        t2=[]
+        #Append all words to s
         for term in postfix:
             if term.isdigit():
-                words.append(self.keywordmap[int(term)])
+                s.append(self.keywordmap[int(term)])
+                count+=1
+        words = sorted(s)
+        print(words)
+        indexed_terms_hits = [None] * count
+        for i in range(len(indexed_terms_hits)):
+            indexed_terms_hits[i] = list()
+
+        #Get all terms and their docID and seperate each index
+        for i in range(len(self.Hash)):
+            for key,value in self.Hash[i]:
+                co = 0
+                for c in words:
+                    if c.lower() == key.lower():
+                        t2.append((key, value))
+                        indexed_terms_hits[co].append((key.lower(), value))
+                    co+=1       
+        #Sort lists and seperate in different indexes
+        for i in range(len(indexed_terms_hits)):
+            sorted_by_docID = sorted(indexed_terms_hits[i], key=lambda tup: int(tup[1]))
+            indexed_terms_hits[i] = sorted_by_docID
+        self.hits = indexed_terms_hits
+
+        temp_hits = []
+        isHit=False
+        #Find same documents    
+        for i in range(len(self.hits)):
+                for j in range(len(self.hits)):
+                    if i != j:
+                        print("DO")
+                        p1 = self.hits[i]
+                        p2 = self.hits[j]
+                        index_pointer1 = 0
+                        index_pointer2= 0
+                        #Loops through each index to find a match
+                        while(index_pointer1 < len(self.hits[i]) and index_pointer2 < len(self.hits[j])):
+                            try:
+                                #If equal, append
+                                if int(p1[index_pointer1][1]) == int(p2[index_pointer2][1]):
+                                    temp_hits.append(p1[index_pointer1][1])
+                                    break
+                                #If doc_ID of 1 is bigger than doc_ID of 2
+                                elif int(p1[index_pointer1][1]) > int(p2[index_pointer2][1]):
+                                    index_pointer2+=1
+                                #If doc_ID of 2 is bigger than doc_ID of 1
+                                elif  int(p1[index_pointer1][1]) < int(p2[index_pointer2][1]):
+                                    index_pointer1+=1       
+                            except IndexError:
+                                break
+        t_hits = collections.Counter(temp_hits)
+        hits = []
+
+        #Return documents with the N words
+        for key in t_hits:
+            if(t_hits[key] >= count and key not in hits):
+                hits.append(key)
+        temp123 = []
+        for num in hits:
+            temp123.append(int(num))
+        hits = temp123
+        print(hits)
+        return hits
         
-        for key,value in self.Hash:
-            print()
     #Analogous to infix -> postfix method
     def build_request(self, queryhandler, postfix):
         operands = []
+        resultant = []
         if self.isAllOrs(queryhandler, postfix):
-            self.doAllOrs(queryhandler, postfix)
+            resultant.append(self.doAllOrs(postfix))
         elif self.isAllAnds(queryhandler, postfix):
-            self.doAllAnds(queryhandler, postfix)
+            resultant.append(self.doAllAnds(postfix))
         else:
             for char in postfix: 
                 #If an operand, push to operands []
                 if char.isdigit():
-                    operands.append(self.keywordmap[int(char)])
-                    self.words.append(self.keywordmap[int(char)])
+                    #operands.append(self.keywordmap[int(char)])
+                    #self.words.append(self.keywordmap[int(char)])
+                    operands.append(char)
                 elif queryhandler.isOperator(char):
                     temp1 = operands.pop()
                     temp2 = operands.pop()
                     if char == "|":
-                        operands.append(self.or_operator(temp1, temp2))
+                        if isinstance(temp1, str) and isinstance(temp2, str):
+                            postfix = temp1+temp2+char
+                            operands.append(self.doAllOrs(postfix))
                     elif char == "&":
-                        operands.append(self.and_operator(temp1, temp2))
+                        if isinstance(temp1, str) and isinstance(temp2,str):
+                            postfix=temp1+temp2+char
+                            operands.append(self.doAllAnds(postfix))
 
     def or_operator(self, keyword1, keyword2):
         self.hits = []
@@ -349,6 +434,7 @@ class Spimi:
         elif isinstance(keyword1, list) and isinstance(keyword2, list):
             self.or_Array_and_String(keyword2, keyword1)
         return self.hits
+            
 
     def or_Array_and_String(self, array, string):
         self.hits = []
@@ -391,6 +477,7 @@ class Spimi:
 
                         break
 
+        
         
     def map_request(self, args):       
         print(args.command)        
