@@ -31,6 +31,7 @@ class Spimi:
         self.keywordmap = []
         self.hits = []
         self.words = []
+        self.resultant = []
 
     #Get all reuters tags from all files
     def search(self):
@@ -291,6 +292,7 @@ class Spimi:
     def doAllOrs(self, postfix):
         s = []
         hits = []
+        
         #Append all words to s
         for term in postfix:
             if term.isdigit():
@@ -316,7 +318,6 @@ class Spimi:
                 print("Type error")
         mylist = tempp
         x = sorted(mylist)
-        print(x)
         return x
 
     #Does operation if all operations are AND
@@ -331,7 +332,6 @@ class Spimi:
                 s.append(self.keywordmap[int(term)])
                 count+=1
         words = sorted(s)
-        print(words)
         indexed_terms_hits = [None] * count
         for i in range(len(indexed_terms_hits)):
             indexed_terms_hits[i] = list()
@@ -350,14 +350,11 @@ class Spimi:
             sorted_by_docID = sorted(indexed_terms_hits[i], key=lambda tup: int(tup[1]))
             indexed_terms_hits[i] = sorted_by_docID
         self.hits = indexed_terms_hits
-
         temp_hits = []
-        isHit=False
         #Find same documents    
         for i in range(len(self.hits)):
                 for j in range(len(self.hits)):
                     if i != j:
-                        print("DO")
                         p1 = self.hits[i]
                         p2 = self.hits[j]
                         index_pointer1 = 0
@@ -388,7 +385,6 @@ class Spimi:
         for num in hits:
             temp123.append(int(num))
         hits = temp123
-        print(hits)
         return hits
         
     #Analogous to infix -> postfix method
@@ -396,9 +392,17 @@ class Spimi:
         operands = []
         resultant = []
         if self.isAllOrs(queryhandler, postfix):
-            resultant.append(self.doAllOrs(postfix))
+            resultant = self.doAllOrs(postfix)
+            mylist = list(dict.fromkeys(resultant))
+            resultant = sorted(mylist)
+            self.resultant = resultant
+
         elif self.isAllAnds(queryhandler, postfix):
-            resultant.append(self.doAllAnds(postfix))
+            resultant = self.doAllAnds(postfix)
+            mylist = list(dict.fromkeys(resultant))
+            resultant = sorted(mylist)
+            self.resultant = resultant
+            
         else:
             for char in postfix: 
                 #If an operand, push to operands []
@@ -407,75 +411,124 @@ class Spimi:
                     #self.words.append(self.keywordmap[int(char)])
                     operands.append(char)
                 elif queryhandler.isOperator(char):
-                    temp1 = operands.pop()
-                    temp2 = operands.pop()
-                    if char == "|":
-                        if isinstance(temp1, str) and isinstance(temp2, str):
-                            postfix = temp1+temp2+char
-                            operands.append(self.doAllOrs(postfix))
-                    elif char == "&":
-                        if isinstance(temp1, str) and isinstance(temp2,str):
-                            postfix=temp1+temp2+char
-                            operands.append(self.doAllAnds(postfix))
+                    try:
+                        temp1 = operands.pop()
+                        temp2 = operands.pop()
+                    except IndexError:
+                        bv = ""
+                        print("Index Error")
+                    else:
+                        if char == "|":
+                            print("ERROR??!?!")
+                            print(str(temp1))
+                            print(str(temp2))
+                            #If both term1 and term2 are strings
+                            if isinstance(temp1, str) and isinstance(temp2, str):
+                                pf = temp1+temp2+char
+                                or_operation = self.doAllOrs(pf)
+                                operands.append(or_operation)
+                                resultant += or_operation
+                            #If one or both elements are not strings
+                            else:
+                                if isinstance(temp1,str) and isinstance(temp2,list):
+                                    resultant += self.doAllOrs(temp1)
+                                elif isinstance(temp1, list) and isinstance(temp2, str):
+                                    resultant += self.doAllOrs(temp1)
+                                elif isinstance(temp1, list) and isinstance(temp2, list):
+                                    resultant = temp1 + temp2
+                        elif char == "&":
+                            #If both term1 and term2 are strings
+                            if isinstance(temp1, str) and isinstance(temp2,str):
+                                postfix=temp1+temp2+char
+                                x=self.doAllAnds(postfix)
+                                operands.append(x)
+                                resultant += x 
+                                 #If one or both elements are not strings
+                            else:
+                                if isinstance(temp1,str) and isinstance(temp2,list):
+                                    print("HERE")
+                                    print(self.keywordmap[int(temp1)])
+                                    intersection = self.getIntersectionDocs(temp1, resultant)
+                                    operands.append(intersection)
+                                    resultant += intersection
+                                elif isinstance(temp1, list) and isinstance(temp2, str):
+                                    print("THERE")
+                                    intersection = self.getIntersectionDocs(temp2, resultant)
+                                    operands.append(intersection)
+                                    resultant += intersection
+                                elif isinstance(temp1, list) and isinstance(temp2, list):
+                                    intersection = temp1 + temp2
+            #remove duplicated and sort
+            mylist = list(dict.fromkeys(resultant))
+            resultant = sorted(mylist)
+            self.resultant = resultant
 
-    def or_operator(self, keyword1, keyword2):
-        self.hits = []
-        #If both strings
-        if isinstance(keyword1, str) and isinstance(keyword2, str):
-            i=0
-            for key, value in self.Hash[i]:
-                if key.lower() == keyword1.lower() or key.lower() == keyword2.lower():
-                    self.hits.append((key, value))
-                i+=1
-        #If keyword1 is a list, other is a string
-        if isinstance(keyword1, list) and isinstance(keyword2, list):
-            self.or_Array_and_String(keyword1, keyword2)
-        #If keyword2 is a list, other is a string
-        elif isinstance(keyword1, list) and isinstance(keyword2, list):
-            self.or_Array_and_String(keyword2, keyword1)
-        return self.hits
-            
+    def getIntersectionDocs(self, term, resultant):
+        setResultant = set(resultant)
+        getTermPosting = []
+        resultant = []
+        if isinstance(term, str):
+            getTermPosting = self.doAllOrs(term)
+            setTermPosting = set(getTermPosting)
+            return list(setTermPosting.intersection(setResultant))
+        elif isinstance(term, list):
+            setTermPosting = set(term)
+            resultant = setTermPosting.intersection(setResultant)
+            return list(resultant)
+    
+    def printSearchResult(self):
+        f= open("querySearchResult.txt","w+")
+        f.write("List of document IDs that match query: " + self.query + "\n")
+        for docHit in self.resultant:
+            f.write("document " + str(docHit) + "\n")
+    # def or_operator(self, keyword1, keyword2):
+    #     self.hits = []
+    #     #If both strings
+    #     if isinstance(keyword1, str) and isinstance(keyword2, str):
+    #         i=0
+    #         for key, value in self.Hash[i]:
+    #             if key.lower() == keyword1.lower() or key.lower() == keyword2.lower():
+    #                 self.hits.append((key, value))
+    #             i+=1
+    #     #If keyword1 is a list, other is a string
+    #     if isinstance(keyword1, list) and isinstance(keyword2, list):
+    #         self.or_Array_and_String(keyword1, keyword2)
+    #     #If keyword2 is a list, other is a string
+    #     elif isinstance(keyword1, list) and isinstance(keyword2, list):
+    #         self.or_Array_and_String(keyword2, keyword1)
+    #     return self.hits
 
-    def or_Array_and_String(self, array, string):
-        self.hits = []
-        for i in range(len(self.Hash)):
-                for key, value in self.Hash[i]:
-                    if key.lower() == string.lower():
-                        self.hits.append((key, value))
-        return self.hits
+    # def and_operator(self, keyword1, keyword2):
+    #     temp = []
+    #     k1 = ""
+    #     k2 = ""
+    #     k1_found = False
+    #     k2_found = False
+    #     if isinstance(keyword1, str) and isinstance(keyword2, str):
+    #         """
+    #         Check which keyword comes after the other
+    #         k1 is the lowest and k2 is the highest
+    #         """
+    #         if(id(keyword1) > id(keyword2)):
+    #             k1 = keyword2
+    #             k2 = keyword1
+    #         else: 
+    #             k1 = keyword1
+    #             k2 = keyword2
 
-    def and_operator(self, keyword1, keyword2):
-        temp = []
-        k1 = ""
-        k2 = ""
-        k1_found = False
-        k2_found = False
-        if isinstance(keyword1, str) and isinstance(keyword2, str):
-            """
-            Check which keyword comes after the other
-            k1 is the lowest and k2 is the highest
-            """
-            if(id(keyword1) > id(keyword2)):
-                k1 = keyword2
-                k2 = keyword1
-            else: 
-                k1 = keyword1
-                k2 = keyword2
+    #         for i in range(len(self.Hash)):
+    #             for k,v in self.Hash[i]:
+    #                 #If k2 found but not k1, search other index (PERFORMANCE)
+    #                 if(k2.lower == k.lower() and k1_found == False):
+    #                     break
+    #                 elif(k1.lower() == k.lower()):
+    #                     k1_found = True
+    #                     temp.append((k ,v))
+    #                 elif(k2.lower() == k.lower()):
+    #                     for j in range(i, len(self.Hash)):
+    #                         ad=1                            
 
-            for i in range(len(self.Hash)):
-                for k,v in self.Hash[i]:
-                    #If k2 found but not k1, search other index (PERFORMANCE)
-                    if(k2.lower == k.lower() and k1_found == False):
-                        print("keyword: " + k1 + " and keyword: " + k2 + " are not in block" + str(i))
-                        break
-                    elif(k1.lower() == k.lower()):
-                        k1_found = True
-                        temp.append((k ,v))
-                    elif(k2.lower() == k.lower()):
-                        for j in range(i, len(self.Hash)):
-                            ad=1                            
-
-                        break
+    #                     break
 
         
         
@@ -495,6 +548,7 @@ class Spimi:
             self.query = args.query
             self.loadDictionnary()
             self.send_query()
+            self.printSearchResult()
 
 
 
