@@ -13,6 +13,7 @@ from operator import itemgetter
 from itertools import groupby
 from collections import Counter
 import numpy, collections
+from StatTable import StatTable
 
 class Spimi:
 
@@ -32,6 +33,8 @@ class Spimi:
         self.hits = []
         self.words = []
         self.resultant = []
+        self.stattable = StatTable()
+        self.stattable.setStart()
 
     #Get all reuters tags from all files
     def search(self):
@@ -113,10 +116,10 @@ class Spimi:
                 reuters_file = open(directory + "/reuters/" + file_name).read()
                 soup = BeautifulSoup(reuters_file, 'html.parser')
                 reuters_tag = soup.find_all('reuters')
-
                 self.pathCurrentBlock = self.pathDisk +"/BLOCK" + str(i)
+                
                 for reuter in reuters_tag:
-                    tokenl = nltk.word_tokenize(reuter.get_text()) 
+                    tokenl = nltk.word_tokenize(reuter.get_text())
                     self.listTerms(tokenl, reuter.get('newid'))
                 #     break
                 # break
@@ -134,6 +137,7 @@ class Spimi:
         term = ""
 
         for token in sorted_list:
+            self.stattable.table_operations(token)
             t = token
             #If String length is 0
             if len(t) <= 1:
@@ -491,6 +495,7 @@ class Spimi:
         if args.command == "createdictionary":
             self.createDictionary()
             self.writeBlockToDisk()
+            self.stattable.computeCalculations()
         elif args.command == "mergeblocks":
             self.loadDictionnary()
             self.mergeBlocks()
