@@ -1,5 +1,8 @@
 import re
-
+"""
+THIS IS WHERE THE INFIX -> POSTFIX
+TRANSFORMATION HAPPENS
+"""
 class QueryHandler:
     def __init__(self, query):
         self.query = query
@@ -8,12 +11,20 @@ class QueryHandler:
         self.postfix = ""
         self.keywordmap = []
 
+    """
+    Check which operation 
+    has higher precedence
+    """
     def getPrecedence(self, c):
         result = 0
         for char in self.operators:
             result += 1
         return result
 
+    """
+    Transform to postfix
+    returns string of numbers and operators
+    """
     def toPostfix(self):
         result = ""
         stack = list()
@@ -56,7 +67,6 @@ class QueryHandler:
             result+=cpop
         count_index = 0
         r_no_operators = re.sub(r'[^\w]', ' ', self.query)
-        #print(r_no_operators)
         for keyword in r_no_operators.split(" "):
             if keyword in self.query and keyword!="": 
                 result = result.replace(keyword, str(count_index))

@@ -1,4 +1,4 @@
-List of document IDs that match query: Fidata|(Corp&bankruptcy&anticipates)
-document 44
+List of document IDs that match query: Fidata|Environmentalist|ecologist
+document 5774
 document 11001
 document 15065

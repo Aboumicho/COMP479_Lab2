@@ -6,6 +6,11 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from math import floor
 
+"""
+THIS CLASS IS
+TO CONSTRUCT THE TABLE 5.1
+"""
+
 class StatTable:
     def __init__(self):
         #All terms
@@ -81,7 +86,7 @@ class StatTable:
     def operation_no_number(self,token):
         #If a number, do nothing, else append
         try:
-            float(token)
+            float(str(token))
         except:
             self.no_number.append(token)
 
@@ -127,14 +132,13 @@ class StatTable:
     COMPUTE 
     CALCULATION
     """
-
     def computeCalculations(self):
         self.doDistinct()
         output = "       (distinct terms)                            (tokens)\n"
         output += "              number       DELTA %       T%              number       DELTA %       T%\n"
-        output += "unfiltered       " +str(len(self.unfiltered_distinct)) +"                            "  + str(len(self.unfiltered)) + "\n"
+        output += "unfiltered       " +str(len(self.unfiltered_distinct)) +"                                 "  + str(len(self.unfiltered)) + "\n"
         output += "no numbers       "+ str(len(self.no_number_distinct))+ "      " + str((floor(((len(self.no_number_distinct)-len(self.unfiltered_distinct)) / (len(self.unfiltered_distinct)))*100)))+ "%      " + str((floor(((len(self.no_number_distinct)-len(self.unfiltered_distinct)) / (len(self.no_number_distinct)))*100))) + "%               " + str(len(self.no_number)) +  "      " + str((floor(((len(self.no_number)-len(self.unfiltered)) / (len(self.unfiltered)))*100))) + "%      "  + str((floor(((len(self.no_number)-len(self.unfiltered)) / (len(self.no_number)))*100))) + "%\n"
-        output += "30 stop words       "+ str(len(self._30_stop_words_distinct))+ "      " + str((floor(((len(self._30_STOP_WORDS)-len(self.no_number_distinct)) / (len(self.no_number_distinct)))*100)))+ "%      " + str(floor(((len(self._30_stop_words_distinct)-len(self.no_number_distinct)) / (len(self._30_stop_words_distinct)))*100)) + "%               " + str(len(self._30_stop_words)) + "      " + str((floor(((len(self._30_stop_words)-len(self.no_number)) / (len(self.no_number)))*100))) + "%      "  + str((floor(((len(self._30_stop_words)-len(self.no_number)) / (len(self._30_stop_words)))*100))) + "%\n"
+        output += "30 stop words       "+ str(len(self._30_stop_words_distinct))+ "      " + str((floor(((len(self._30_stop_words_distinct)-len(self.no_number_distinct)) / (len(self.no_number_distinct)))*100)))+ "%      " + str(floor(((len(self._30_stop_words_distinct)-len(self.no_number_distinct)) / (len(self._30_stop_words_distinct)))*100)) + "%               " + str(len(self._30_stop_words)) + "      " + str((floor(((len(self._30_stop_words)-len(self.no_number)) / (len(self.no_number)))*100))) + "%      "  + str((floor(((len(self._30_stop_words)-len(self.no_number)) / (len(self._30_stop_words)))*100))) + "%\n"
         output += "150 stop words       "+ str(len(self._150_stop_words_distinct))+ "      " + str((floor(((len(self._150_stop_words_distinct)-len(self._30_stop_words_distinct)) / (len(self._30_stop_words_distinct)))*100)))+ "%      " + str((floor(((len(self._150_stop_words_distinct)-len(self._30_stop_words_distinct)) / (len(self._150_stop_words_distinct)))*100))) + "%               " + str(len(self._150_stop_words)) + "      " + str((floor(((len(self._150_stop_words)-len(self._30_stop_words)) / (len(self._30_stop_words)))*100))) + "%      "  + str((floor(((len(self._150_stop_words)-len(self._30_stop_words)) / (len(self._150_stop_words)))*100))) + "%\n"
         f = open("table51.txt", "w+")
         f.write(output)
